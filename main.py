@@ -36,23 +36,45 @@ async def handle_client(process: asyncssh.SSHServerProcess) -> None:
     password = server.state["password"]
     logging.info(f'{username}:{password} successfully connected')
 
-    logging.info(f'generating & checking port')
-    random_port = random.randint(1000,10000)
+    ### Create the docker container
+    random_port = random.randint(1000, 10000)
     while is_port_in_use(random_port):
         random_port = random.randint(1000, 10000)
-
-    logging.info("creating docker")
-    docker = subprocess.run(
+    logging.info("Starting Docker creation")
+    docker_command = subprocess.run(
         ["docker", "run", "-d", "--rm", f"-p{random_port}:22", "ubuntu-ssh"],
         capture_output=True,
         text=True,
         check=True
     )
+    docker:str = docker_command.stdout.rstrip()
+    server.state["docker"] = docker
+    logging.info(f'docker {docker[:10]}... created, listening on port {random_port}')
 
-    logging.info(f'docker {docker} created, listening on port {random_port}')
-    server.state["docker"] = docker.stdout
+    ### randomize the root password
+    root_password = random.randbytes(10).hex()
+    server.state["docker_root_pass"] = root_password
+    user_command = subprocess.run(
+        f"sudo docker exec {docker} bash -c \"echo 'root:{root_password}'|chpasswd\"",
+        shell = True,
+        capture_output=True,
+        text=True,
+        check=True
+    )
+    logging.info(f'root password on {docker[:10]} has been randomized to {root_password}')
 
-    bc_proc = subprocess.Popen(f'sshpass -ptest ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {random_port} root@localhost',
+
+    ### create the user:password used to log in
+    user_command = subprocess.run(
+        f"sudo docker exec {docker} bash -c \"useradd -m -s /bin/bash {username}; echo '{username}:{password}'|chpasswd\"",
+        shell = True,
+        capture_output=True,
+        text=True,
+        check=True
+    )
+    logging.info(f'user {username} has been created on {docker[:10]}')
+
+    bc_proc = subprocess.Popen(f'sshpass -p{password} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {random_port} {username}@localhost',
                                shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     await process.redirect(stdin=bc_proc.stdin, stdout=bc_proc.stdout, stderr=bc_proc.stderr)
     await process.stdout.drain()
@@ -64,8 +86,8 @@ class MySSHServer(asyncssh.SSHServer):
         self.state = {}
 
     def connection_made(self, conn: asyncssh.SSHServerConnection) -> None:
-        peername = conn.get_extra_info('peername')[0]
-        logging.info(f'SSH connection received from {peername}.')
+        peer_name = conn.get_extra_info('peername')[0]
+        logging.info(f'SSH connection received from {peer_name}.')
 
     def connection_lost(self, exc: Optional[Exception]) -> None:
         if exc:
