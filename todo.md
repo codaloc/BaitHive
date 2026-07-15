@@ -1,6 +1,6 @@
 ### Slight stealth
 -[ ] change pid 1 process to Nginx or Apache
--[ ] set create user with password, then login as this user
+-[x] set create user with password, then login as this user
 -[ ] non-random hostname
 -[ ] keyboard-interactive method removal
 -[ ] change asyncssh banner to something more classic
@@ -10,7 +10,8 @@
   - fake secrets
 -[ ] file creation/download
 -[ ] commands run (and output?)
--[ ] different files for logging
+-[x] different files for logging
+  - main loging
   - user:pass
   - commands
 
@@ -31,6 +32,6 @@
   - most likely: passwords, user, commands
 
 ### Some of the done
--[] Does not require the user to be in the docker group
+-[x] Does not require the user to be in the docker group
 
 

@@ -13,14 +13,35 @@ from typing import Optional
 
 #passwords = {'guest': b'', 'user123': bcrypt.hashpw(b'secretpw', bcrypt.gensalt())}
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(message)s",
-    handlers=[
-        logging.FileHandler("logs.log"),
-        logging.StreamHandler(sys.stdout),
-    ],
+
+pretty_formatter = logging.Formatter(
+    "%(asctime)s %(levelname)s %(message)s"
 )
+live_formatter = logging.Formatter(
+    "%(asctime)s %(message)s",
+    datefmt="%H:%M:%S"
+)
+minimal_formatter = logging.Formatter(
+    "%(asctime)s %(message)s",
+    datefmt = "%d/%m-%H:%M:%S"
+)
+
+creds_logger = logging.getLogger("credentials")
+main_logger = logging.getLogger("main")
+
+creds_handler = logging.FileHandler("logs/credentials.log")
+creds_handler.setFormatter(minimal_formatter)
+creds_logger.addHandler(creds_handler)
+creds_logger.setLevel(logging.INFO)
+
+main_handler_file = logging.FileHandler("logs/main.log")
+main_handler_file.setFormatter(pretty_formatter)
+main_handler_stdout = logging.StreamHandler(sys.stdout)
+main_handler_stdout.setFormatter(live_formatter)
+main_logger.addHandler(main_handler_file)
+main_logger.addHandler(main_handler_stdout)
+main_logger.setLevel(logging.INFO)
+
 
 
 def is_port_in_use(port):
@@ -34,13 +55,13 @@ async def handle_client(process: asyncssh.SSHServerProcess) -> None:
     server = process.get_extra_info("connection").get_owner()
     username = process.get_extra_info('username')
     password = server.state["password"]
-    logging.info(f'{username}:{password} successfully connected')
+    main_logger.info(f'{username}:{password} successfully connected')
 
     ### Create the docker container
     random_port = random.randint(1000, 10000)
     while is_port_in_use(random_port):
         random_port = random.randint(1000, 10000)
-    logging.info("Starting Docker creation")
+    main_logger.info("Starting Docker creation")
     docker_command = subprocess.run(
         ["docker", "run", "-d", "--rm", f"-p{random_port}:22", "ubuntu-ssh"],
         capture_output=True,
@@ -49,7 +70,7 @@ async def handle_client(process: asyncssh.SSHServerProcess) -> None:
     )
     docker:str = docker_command.stdout.rstrip()
     server.state["docker"] = docker
-    logging.info(f'docker {docker[:10]}... created, listening on port {random_port}')
+    main_logger.info(f'docker {docker[:10]}... created, listening on port {random_port}')
 
     ### randomize the root password
     root_password = random.randbytes(10).hex()
@@ -61,7 +82,7 @@ async def handle_client(process: asyncssh.SSHServerProcess) -> None:
         text=True,
         check=True
     )
-    logging.info(f'root password on {docker[:10]} has been randomized to {root_password}')
+    main_logger.info(f'root password on {docker[:10]} has been randomized to {root_password}')
 
 
     ### create the user:password used to log in
@@ -72,7 +93,7 @@ async def handle_client(process: asyncssh.SSHServerProcess) -> None:
         text=True,
         check=True
     )
-    logging.info(f'user {username} has been created on {docker[:10]}')
+    main_logger.info(f'user {username} has been created on {docker[:10]}')
 
     bc_proc = subprocess.Popen(f'sshpass -p{password} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {random_port} {username}@localhost',
                                shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -87,13 +108,13 @@ class MySSHServer(asyncssh.SSHServer):
 
     def connection_made(self, conn: asyncssh.SSHServerConnection) -> None:
         peer_name = conn.get_extra_info('peername')[0]
-        logging.info(f'SSH connection received from {peer_name}.')
+        main_logger.info(f'SSH connection received from {peer_name}.')
 
     def connection_lost(self, exc: Optional[Exception]) -> None:
         if exc:
-            logging.warning('SSH connection error: ' + str(exc))
+            main_logger.warning('SSH connection error: ' + str(exc))
         else:
-            logging.info(f'SSH Connection closed')
+            main_logger.info(f'SSH Connection closed')
 
         ### Remove container after
         # only stops the container since it was spawned with --rm
@@ -104,7 +125,7 @@ class MySSHServer(asyncssh.SSHServer):
             text=True,
             check=True
         )
-        logging.info(f'Container {self.state["docker"][:10]} was removed on closed connection')
+        main_logger.info(f'Container {self.state["docker"][:10]} was removed on closed connection')
 
     def begin_auth(self, username: str) -> bool:
         # If the user's password is the empty string, no auth is required
@@ -115,6 +136,7 @@ class MySSHServer(asyncssh.SSHServer):
         return True
 
     def validate_password(self, username: str, password: str) -> bool:
+        creds_logger.info(f"{username}:{password}")
         self.state["username"] = username
         self.state["password"] = password
         # if username not in passwords:
@@ -135,7 +157,7 @@ loop = asyncio.new_event_loop()
 try:
     loop.run_until_complete(start_server())
 except (OSError, asyncssh.Error) as exc:
-    logging.warning('Error starting server: ' + str(exc))
+    main_logger.warning('Error starting server: ' + str(exc))
     sys.exit()
 
 loop.run_forever()

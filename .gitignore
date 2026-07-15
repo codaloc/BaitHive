@@ -1,4 +1,4 @@
 .venv
 .idea
-logs.log
+logs
 ssh_host_key*
