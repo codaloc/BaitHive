@@ -54,7 +54,7 @@ async def handle_client(process: asyncssh.SSHServerProcess) -> None:
     ### randomize the root password
     root_password = random.randbytes(10).hex()
     server.state["docker_root_pass"] = root_password
-    user_command = subprocess.run(
+    root_pass_command = subprocess.run(
         f"sudo docker exec {docker} bash -c \"echo 'root:{root_password}'|chpasswd\"",
         shell = True,
         capture_output=True,
@@ -94,6 +94,17 @@ class MySSHServer(asyncssh.SSHServer):
             logging.warning('SSH connection error: ' + str(exc))
         else:
             logging.info(f'SSH Connection closed')
+
+        ### Remove container after
+        # only stops the container since it was spawned with --rm
+        docker_del_command = subprocess.run(
+            f"sudo docker stop {self.state["docker"]}",
+            shell=True,
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        logging.info(f'Container {self.state["docker"][:10]} was removed on closed connection')
 
     def begin_auth(self, username: str) -> bool:
         # If the user's password is the empty string, no auth is required
