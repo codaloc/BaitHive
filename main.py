@@ -1,10 +1,14 @@
 #! .venv/bin/python
 
-import logging
-import asyncio, asyncssh, bcrypt, sys, subprocess
-import socket
-import random
+import sys
 import time
+import socket
+import bcrypt
+import random
+import logging
+import asyncio
+import asyncssh
+import  subprocess
 from typing import Optional
 
 #passwords = {'guest': b'', 'user123': bcrypt.hashpw(b'secretpw', bcrypt.gensalt())}
@@ -27,32 +31,38 @@ def is_port_in_use(port):
 
 
 async def handle_client(process: asyncssh.SSHServerProcess) -> None:
+    server = process.get_extra_info("connection").get_owner()
     username = process.get_extra_info('username')
-    logging.info(f'{username} successfully connected')
+    password = server.state["password"]
+    logging.info(f'{username}:{password} successfully connected')
 
     logging.info(f'generating & checking port')
     random_port = random.randint(1000,10000)
-    while is_port_in_use(random_port) == True:
+    while is_port_in_use(random_port):
         random_port = random.randint(1000, 10000)
 
     logging.info("creating docker")
-    docker:str = subprocess.run(
+    docker = subprocess.run(
         ["docker", "run", "-d", "--rm", f"-p{random_port}:22", "ubuntu-ssh"],
         capture_output=True,
         text=True,
         check=True
-    ).stdout
+    )
 
     logging.info(f'docker {docker} created, listening on port {random_port}')
+    server.state["docker"] = docker.stdout
 
     bc_proc = subprocess.Popen(f'sshpass -ptest ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {random_port} root@localhost',
                                shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     await process.redirect(stdin=bc_proc.stdin, stdout=bc_proc.stdout, stderr=bc_proc.stderr)
     await process.stdout.drain()
     process.exit(0)
-    process.exit(0)
 
 class MySSHServer(asyncssh.SSHServer):
+
+    def __init__(self):
+        self.state = {}
+
     def connection_made(self, conn: asyncssh.SSHServerConnection) -> None:
         peername = conn.get_extra_info('peername')[0]
         logging.info(f'SSH connection received from {peername}.')
@@ -72,7 +82,8 @@ class MySSHServer(asyncssh.SSHServer):
         return True
 
     def validate_password(self, username: str, password: str) -> bool:
-        logging.info(f'Connection using credentials {username}:{password}')
+        self.state["username"] = username
+        self.state["password"] = password
         # if username not in passwords:
         #     return False
         # pw = passwords[username]

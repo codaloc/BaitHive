@@ -1,1 +1,4 @@
 .venv
+.idea
+logs.log
+ssh_host_key*
