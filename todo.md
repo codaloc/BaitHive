@@ -9,22 +9,21 @@
 -[ ] Looking for file opening/modification
   - fake secrets
 -[ ] file creation/download
--[ ] commands run (and output?)
--[x] different files for logging
-  - main loging
-  - user:pass
-  - commands
+-[x} credentials used
+-[x] commands run
+-[x} full ssh session transcript 
+-[x] logged in different files
 
 ### Control
 -[ ] TOML settings  
 -[ ] no docker mode (connection attempts only)
 
 ### Containers
--[ ] creation of new docker on connection
+-[x] creation of new docker on connection
 -[ ] association of session (IP-wise)
 -[ ] same session uses the same docker
 -[ ] timeout of docker
--[ ] deletion of docker when session is closed
+-[x] deletion of docker when session is closed
 
 ### Convenience
 -[ ] pass signals to container ssh (ctrl+c)
