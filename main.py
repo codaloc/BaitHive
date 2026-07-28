@@ -14,6 +14,9 @@ from typing import Optional
 #passwords = {'guest': b'', 'user123': bcrypt.hashpw(b'secretpw', bcrypt.gensalt())}
 
 
+DOCKER_HOSTNAME = "dell-devbox"
+
+
 pretty_formatter = logging.Formatter(
     "%(asctime)s %(levelname)s %(message)s"
 )
@@ -121,7 +124,7 @@ async def handle_client(process: asyncssh.SSHServerProcess) -> None:
         random_port = random.randint(1000, 10000)
     main_logger.info("Starting Docker creation")
     docker_command = subprocess.run(
-        ["docker", "run", "-d", "--rm", f"-p{random_port}:22", "ubuntu-ssh"],
+        ["docker", "run", "-d", "--rm", f"-p{random_port}:22", "--hostname", DOCKER_HOSTNAME, "ubuntu-ssh"],
         capture_output=True,
         text=True,
         check=True
@@ -159,8 +162,9 @@ async def handle_client(process: asyncssh.SSHServerProcess) -> None:
         f"-p{password}",
         "ssh",
         "-tt", ## important, forces TTY
-        "-o", "StrictHostKeyChecking=no",
-        "-o", "UserKnownHostsFile=/dev/null",
+        "-o", "StrictHostKeyChecking=no", ## ignore any previously saved key (for localhost)
+        "-o", "UserKnownHostsFile=/dev/null", ## and doesn't save the new one
+        "-o", "LogLevel=QUIET", ## hides "connection closed...", "Permanently added..."
         "-p", str(random_port),
         f"{username}@localhost",
         stdin=asyncio.subprocess.PIPE,
@@ -175,21 +179,34 @@ async def handle_client(process: asyncssh.SSHServerProcess) -> None:
     logfile.write(f"\n\x1b[31m{datetime.datetime.now()} - {username}:{password} - {docker}:{process.get_extra_info('peername')[1]}\n\x1b[0m".encode("utf-8"))
     cmd_in_line_logger = LineLogger(cmd_std_in_logger)
 
+    ### start all interceptions
+    # sent by the client, relayed to server
+    stdin_task = asyncio.create_task(intercept(process.stdin, ssh_proc.stdin, line_logger=cmd_in_line_logger))
+    # sent by the server, relayed to client
+    stderr_task = asyncio.create_task(intercept(ssh_proc.stdout, process.stdout, session_file=logfile))
+    # sent by the server, relayed to client
+    stdout_task = asyncio.create_task(intercept(ssh_proc.stderr, process.stderr, session_file=logfile))
+
+
+
+    ### wait until ssh closes
+    rc = await ssh_proc.wait()
+
+    ### abort all tasks
+    stdin_task.cancel()
+    stdout_task.cancel()
+    stderr_task.cancel()
+
+    ### wait for tasks to end
     await asyncio.gather(
-        ### sent by the client, relayed to server
-        intercept(process.stdin, ssh_proc.stdin,line_logger=cmd_in_line_logger),
-        ### sent by the server, relayed to client
-        intercept(ssh_proc.stdout, process.stdout,session_file=logfile),
-        ### sent by the server, relayed to client
-        intercept(ssh_proc.stderr, process.stderr,session_file=logfile),
+        stdin_task,
+        stdout_task,
+        stderr_task,
+        return_exceptions=True,
     )
 
-    logfile.close()
-
-    rc = await ssh_proc.wait()
     process.exit(rc)
-
-
+    logfile.close()
 
 class MySSHServer(asyncssh.SSHServer):
 

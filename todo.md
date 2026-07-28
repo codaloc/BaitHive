@@ -1,9 +1,11 @@
 ### Slight stealth
 -[ ] change pid 1 process to Nginx or Apache
 -[x] set create user with password, then login as this user
--[ ] non-random hostname
+-[x] non-random hostname
 -[ ] keyboard-interactive method removal
 -[ ] change asyncssh banner to something more classic
+-[ ] remove .rock and .dockerenv
+-[x] remove duplicated ssh warning and info messages. 
 
 ### Monitoring
 -[ ] Looking for file opening/modification
@@ -13,6 +15,7 @@
 -[x] commands run
 -[x} full ssh session transcript 
 -[x] logged in different files
+-[ ] indication of session in command logs 
 
 ### Control
 -[ ] TOML settings  
@@ -26,11 +29,8 @@
 -[x] deletion of docker when session is closed
 
 ### Convenience
--[ ] pass signals to container ssh (ctrl+c)
+-[x] Does not require the user to be in the docker group
+-[x] multiple attacker simultaneously 
+-[x] pass signals to container ssh (ctrl+c)
 -[ ] report creation commands
   - most likely: passwords, user, commands
-
-### Some of the done
--[x] Does not require the user to be in the docker group
-
-
