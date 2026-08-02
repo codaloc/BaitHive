@@ -14,5 +14,6 @@ RUN rm -rf .dockerenv .rock
 
 EXPOSE 22
 
-# Start SSH service
+ENTRYPOINT ["sh", "-c", "rm -f /.dockerenv && exec \"$@\"", "--"]
+
 CMD ["/usr/sbin/sshd", "-D"]
