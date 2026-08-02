@@ -2,7 +2,6 @@
 -[ ] change pid 1 process to Nginx or Apache
 -[x] set create user with password, then login as this user
 -[x] non-random hostname
--[ ] keyboard-interactive method removal
 -[x] change asyncssh banner to something more classic
 -[x] remove .rock and .dockerenv
 -[x] remove duplicated ssh warning and info messages. 
@@ -11,9 +10,9 @@
 -[ ] Looking for file opening/modification
   - fake secrets
 -[ ] file creation/download
--[x} credentials used
+-[x] credentials used
 -[x] commands run
--[x} full ssh session transcript 
+-[x] full ssh session transcript 
 -[x] logged in different files
 -[ ] indication of session in command logs 
 
