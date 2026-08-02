@@ -10,6 +10,8 @@ RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/
 
 RUN sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
 
+RUN rm -rf .dockerenv .rock
+
 EXPOSE 22
 
 # Start SSH service
