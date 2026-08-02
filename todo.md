@@ -3,8 +3,8 @@
 -[x] set create user with password, then login as this user
 -[x] non-random hostname
 -[ ] keyboard-interactive method removal
--[ ] change asyncssh banner to something more classic
--[ ] remove .rock and .dockerenv
+-[x] change asyncssh banner to something more classic
+-[x] remove .rock and .dockerenv
 -[x] remove duplicated ssh warning and info messages. 
 
 ### Monitoring

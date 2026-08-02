@@ -1,5 +1,6 @@
 #! .venv/bin/python
 
+import os
 import sys
 import socket
 import bcrypt
@@ -15,41 +16,10 @@ from typing import Optional
 
 
 DOCKER_HOSTNAME = "dell-devbox"
+SSH_PORT = 22
+LOGS_FOLDER = "logs"
 
 
-pretty_formatter = logging.Formatter(
-    "%(asctime)s %(levelname)s %(message)s"
-)
-live_formatter = logging.Formatter(
-    "%(asctime)s %(message)s",
-    datefmt="%H:%M:%S"
-)
-minimal_formatter = logging.Formatter(
-    "%(asctime)s %(message)s",
-    datefmt = "%d/%m-%H:%M:%S"
-)
-
-Path("logs").mkdir(exist_ok=True, parents=True)
-creds_logger = logging.getLogger("credentials")
-creds_handler = logging.FileHandler("logs/credentials.log")
-creds_handler.setFormatter(minimal_formatter)
-creds_logger.addHandler(creds_handler)
-creds_logger.setLevel(logging.INFO)
-
-main_logger = logging.getLogger("main")
-main_handler_file = logging.FileHandler("logs/main.log")
-main_handler_file.setFormatter(pretty_formatter)
-main_handler_stdout = logging.StreamHandler(sys.stdout)
-main_handler_stdout.setFormatter(live_formatter)
-main_logger.addHandler(main_handler_file)
-main_logger.addHandler(main_handler_stdout)
-main_logger.setLevel(logging.INFO)
-
-cmd_std_in_logger = logging.getLogger("cmd_input")
-cmd_in_logger_file = logging.FileHandler("logs/commands.log")
-cmd_in_logger_file.setFormatter(pretty_formatter)
-cmd_std_in_logger.addHandler(cmd_in_logger_file)
-cmd_std_in_logger.setLevel(logging.INFO)
 
 
 class LineLogger:
@@ -61,16 +31,27 @@ class LineLogger:
         self.buf.extend(data)
 
         while True:
-            # Look for either CR or LF
-            for sep in (b"\r", b"\n"):
-                idx = self.buf.find(sep)
-                if idx != -1:
-                    line = self.buf[:idx]
-                    del self.buf[:idx + 1]
-                    self.logger.info("%s", line.decode(errors="replace"))
-                    break
-            else:
+            cr = self.buf.find(b"\r")
+            lf = self.buf.find(b"\n")
+
+            # if cr/lf found, leave everything at the end of the buffer
+            if cr == -1 and lf == -1:
                 break
+
+            if cr == -1:
+                idx = lf
+            elif lf == -1:
+                idx = cr
+            else:
+                idx = min(cr, lf)
+
+            # gets content of buf before the cr/lf
+            line = self.buf[:idx]
+            # logs it
+            self.logger.info("%s", line.decode(errors="replace"))
+            # deleted it with the extra cr/lf
+            del self.buf[:idx + 1]
+
 
     def flush(self):
         if self.buf:
@@ -173,7 +154,7 @@ async def handle_client(process: asyncssh.SSHServerProcess) -> None:
     )
 
     ### Open session logging file and create it if needed
-    logdir = "./logs/sessions"
+    logdir = "./"+LOGS_FOLDER+"/sessions"
     Path(logdir).mkdir(exist_ok=True, parents=True)
     logfile = open(f"{logdir}/{session_name(process.get_extra_info('peername')[0], docker)}.session", "ab")
     logfile.write(f"\n\x1b[31m{datetime.datetime.now()} - {username}:{password} - {docker}:{process.get_extra_info('peername')[1]}\n\x1b[0m".encode("utf-8"))
@@ -255,14 +236,56 @@ class MySSHServer(asyncssh.SSHServer):
         return True
 
 async def start_server() -> None:
-    await asyncssh.create_server(MySSHServer, '', 8022,
+    await asyncssh.create_server(MySSHServer, '', SSH_PORT,
                                  server_host_keys=['ssh_host_key'],
                                  process_factory=handle_client,
-                                 encoding=None
+                                 encoding=None,
+                                 server_version='OpenSSH_10.4'
                                  )
 
-loop = asyncio.new_event_loop()
 
+if os.geteuid() != 0:
+    print("This must be run as root to spawn docker container", file=sys.stderr)
+    sys.exit(1)
+
+
+pretty_formatter = logging.Formatter(
+    "%(asctime)s %(levelname)s %(message)s"
+)
+live_formatter = logging.Formatter(
+    "%(asctime)s %(message)s",
+    datefmt="%H:%M:%S"
+)
+minimal_formatter = logging.Formatter(
+    "%(asctime)s %(message)s",
+    datefmt = "%d/%m-%H:%M:%S"
+)
+
+Path(LOGS_FOLDER).mkdir(exist_ok=True, parents=True)
+creds_logger = logging.getLogger("credentials")
+creds_handler = logging.FileHandler(LOGS_FOLDER + "/credentials.log")
+creds_handler.setFormatter(minimal_formatter)
+creds_logger.addHandler(creds_handler)
+creds_logger.setLevel(logging.INFO)
+
+main_logger = logging.getLogger("main")
+main_handler_file = logging.FileHandler(LOGS_FOLDER + "/main.log")
+main_handler_file.setFormatter(pretty_formatter)
+main_handler_stdout = logging.StreamHandler(sys.stdout)
+main_handler_stdout.setFormatter(live_formatter)
+main_logger.addHandler(main_handler_file)
+main_logger.addHandler(main_handler_stdout)
+main_logger.setLevel(logging.INFO)
+
+cmd_std_in_logger = logging.getLogger("cmd_input")
+cmd_in_logger_file = logging.FileHandler(LOGS_FOLDER + "/commands.log")
+cmd_in_logger_file.setFormatter(pretty_formatter)
+cmd_std_in_logger.addHandler(cmd_in_logger_file)
+cmd_std_in_logger.setLevel(logging.INFO)
+
+
+
+loop = asyncio.new_event_loop()
 try:
     loop.run_until_complete(start_server())
     main_logger.info("SSH distributor running !")
