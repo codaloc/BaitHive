@@ -1,0 +1,12 @@
+Description=BaitHive
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/home/debian/BaitHive/main.py
+Restart=on-failure
+RestartSec=5
+WorkingDirectory=/home/debian/BaitHive
+
+[Install]
+WantedBy=multi-user.target
