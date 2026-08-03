@@ -4,7 +4,8 @@
 -[x] non-random hostname
 -[x] change asyncssh banner to something more classic
 -[x] remove .rock and .dockerenv
--[x] remove duplicated ssh warning and info messages. 
+-[x] remove duplicated ssh warning and info messages.
+-[x] common username and/or password required
 
 ### Monitoring
 -[ ] Looking for file opening/modification

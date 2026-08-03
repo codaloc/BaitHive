@@ -18,8 +18,9 @@ from typing import Optional
 DOCKER_HOSTNAME = "dell-devbox"
 SSH_PORT = 22
 LOGS_FOLDER = "logs"
-
-
+SERVER_VERSION_BANNER = "OpenSSH_10.4"
+REQUIRE_COMMON_USERNAME = True
+REQUIRE_COMMON_PASSWORD = True
 
 
 class LineLogger:
@@ -228,27 +229,32 @@ class MySSHServer(asyncssh.SSHServer):
         creds_logger.info(f"{username}:{password}")
         self.state["username"] = username
         self.state["password"] = password
-        # if username not in passwords:
-        #     return False
-        # pw = passwords[username]
-        # if not password and not pw:
-        #     return True
-        # return bcrypt.checkpw(password.encode('utf-8'), pw)
-        return True
+        if (username not in common_username) and REQUIRE_COMMON_USERNAME:
+            print("username failed and was required")
+            return False
+        if (password not in common_passwords) and REQUIRE_COMMON_PASSWORD:
+            print("password failed and was required")
+            return False
+        return  True
 
 async def start_server() -> None:
     await asyncssh.create_server(MySSHServer, '', SSH_PORT,
                                  server_host_keys=['ssh_host_key'],
                                  process_factory=handle_client,
                                  encoding=None,
-                                 server_version='OpenSSH_10.4'
+                                 server_version=SERVER_VERSION_BANNER
                                  )
 
 
 if os.geteuid() != 0:
-    print("This must be run as root to spawn docker container", file=sys.stderr)
+    print("This must be run as root to spawn docker containers", file=sys.stderr)
     sys.exit(1)
 
+
+with open("most_common_passwords.txt", "r") as pass_file:
+    common_passwords = [line.rstrip("\n") for line in pass_file]
+with open("most_common_username.txt", "r") as user_file:
+    common_username = [line.rstrip("\n") for line in user_file]
 
 pretty_formatter = logging.Formatter(
     "%(asctime)s %(levelname)s %(message)s"

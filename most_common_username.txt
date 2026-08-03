@@ -1,0 +1,15 @@
+root
+toor
+admin
+adm
+test
+guest
+user
+ssh
+administrator
+ansible
+debian
+username
+server
+operator
+nobody
