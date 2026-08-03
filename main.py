@@ -12,15 +12,13 @@ import asyncssh
 import  subprocess
 from pathlib import Path
 from typing import Optional
-#passwords = {'guest': b'', 'user123': bcrypt.hashpw(b'secretpw', bcrypt.gensalt())}
-
 
 DOCKER_HOSTNAME = "dell-devbox"
 SSH_PORT = 22
 LOGS_FOLDER = "logs"
 SERVER_VERSION_BANNER = "OpenSSH_10.4"
-REQUIRE_COMMON_USERNAME = True
-REQUIRE_COMMON_PASSWORD = True
+REQUIRE_COMMON_USERNAME = False
+REQUIRE_COMMON_PASSWORD = False
 
 
 class LineLogger:
@@ -230,10 +228,10 @@ class MySSHServer(asyncssh.SSHServer):
         self.state["username"] = username
         self.state["password"] = password
         if (username not in common_username) and REQUIRE_COMMON_USERNAME:
-            print("username failed and was required")
+            main_logger.info(f'Username failed and was required.')
             return False
         if (password not in common_passwords) and REQUIRE_COMMON_PASSWORD:
-            print("password failed and was required")
+            main_logger.info(f'Password failed and was required.')
             return False
         return  True
 
