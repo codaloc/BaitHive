@@ -197,6 +197,7 @@ class MySSHServer(asyncssh.SSHServer):
     def connection_made(self, conn: asyncssh.SSHServerConnection) -> None:
         peer_name = conn.get_extra_info('peername')[0]
         main_logger.info(f'SSH connection received from {peer_name}.')
+        conn_ip_logger.info(f'{peer_name}')
 
     def connection_lost(self, exc: Optional[Exception]) -> None:
         if exc:
@@ -260,6 +261,9 @@ minimal_formatter = logging.Formatter(
     "%(asctime)s %(message)s",
     datefmt = "%d/%m-%H:%M:%S"
 )
+raw_formatter = logging.Formatter(
+    "%(message)s",
+)
 
 Path(LOGS_FOLDER).mkdir(exist_ok=True, parents=True)
 creds_logger = logging.getLogger("credentials")
@@ -282,6 +286,12 @@ cmd_in_logger_file = logging.FileHandler(LOGS_FOLDER + "/commands.log")
 cmd_in_logger_file.setFormatter(pretty_formatter)
 cmd_std_in_logger.addHandler(cmd_in_logger_file)
 cmd_std_in_logger.setLevel(logging.INFO)
+
+conn_ip_logger = logging.getLogger("conn_ips")
+conn_ip_logger_file = logging.FileHandler(LOGS_FOLDER + "/ips.log")
+conn_ip_logger_file.setFormatter(raw_formatter)
+conn_ip_logger.addHandler(conn_ip_logger_file)
+conn_ip_logger.setLevel(logging.INFO)
 
 
 
