@@ -2,6 +2,7 @@
 
 import os
 import sys
+import time
 import socket
 import bcrypt
 import random
@@ -135,6 +136,7 @@ async def handle_client(process: asyncssh.SSHServerProcess) -> None:
     )
     main_logger.info(f'user {username} has been created on {docker[:10]}')
 
+    containers.append([docker, process.get_extra_info('peername')[0], time.time()])
 
     ### Connect asyncSSH to docker ssh
     ssh_proc = await asyncio.create_subprocess_exec(
@@ -167,7 +169,8 @@ async def handle_client(process: asyncssh.SSHServerProcess) -> None:
     # sent by the server, relayed to client
     stdout_task = asyncio.create_task(intercept(ssh_proc.stderr, process.stderr, session_file=logfile))
 
-
+    with open(LOGS_FOLDER + "/container_count", "w") as cc_file:
+        cc_file.write(str(len(containers)))
 
     ### wait until ssh closes
     rc = await ssh_proc.wait()
@@ -188,6 +191,8 @@ async def handle_client(process: asyncssh.SSHServerProcess) -> None:
     process.exit(rc)
     logfile.close()
 
+
+
 class MySSHServer(asyncssh.SSHServer):
 
     def __init__(self):
@@ -195,6 +200,7 @@ class MySSHServer(asyncssh.SSHServer):
 
     def connection_made(self, conn: asyncssh.SSHServerConnection) -> None:
         peer_name = conn.get_extra_info('peername')[0]
+        self.state["ip"] = peer_name
         main_logger.info(f'SSH connection received from {peer_name}.')
         conn_ip_logger.info(f'{peer_name}')
 
@@ -204,20 +210,30 @@ class MySSHServer(asyncssh.SSHServer):
         else:
             main_logger.info(f'SSH Connection closed')
 
-        ### Remove container after
-        # only stops the container since it was spawned with --rm
-        docker_del_command = subprocess.run(
-            f"sudo docker stop {self.state["docker"]}",
-            shell=True,
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        main_logger.info(f'Container {self.state["docker"][:10]} was removed on closed connection')
+
+        if self.state["docker"]:
+            ### Remove container after
+            # only stops the container since it was spawned with --rm
+            docker_del_command = subprocess.run(
+                f"sudo docker stop {self.state["docker"]}",
+                shell=True,
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            main_logger.info(f'Container {self.state["docker"][:10]} was removed on closed connection')
+
+            # Remove docker from list
+            for container in containers:
+                if container[0] == self.state["docker"]:
+                    containers.remove(container)
+
+            # Modify docker count
+
+            with open(LOGS_FOLDER + "/container_count", "w") as cc_file:
+                cc_file.write(str(len(containers)))
 
     def begin_auth(self, username: str) -> bool:
-        # If the user's password is the empty string, no auth is required
-        # return passwords.get(username) != b''
         return True
 
     def password_auth_supported(self) -> bool:
@@ -229,11 +245,20 @@ class MySSHServer(asyncssh.SSHServer):
         self.state["password"] = password
         if (username not in common_username) and REQUIRE_COMMON_USERNAME:
             main_logger.info(f'Username failed and was required.')
+            comb_logger.info(f"{self.state["ip"]} {username}:{password} 0")
             return False
-        if (password not in common_passwords) and REQUIRE_COMMON_PASSWORD:
+        elif (password not in common_passwords) and REQUIRE_COMMON_PASSWORD:
             main_logger.info(f'Password failed and was required.')
+            comb_logger.info(f"{self.state["ip"]} {username}:{password} 0")
             return False
-        return  True
+        # needed because setting the linux password won't work on a empty string
+        elif (password == ''):
+            comb_logger.info(f"{self.state["ip"]} {username}:{password} 0")
+            return False
+
+
+        comb_logger.info(f"{self.state["ip"]} {username}:{password} 1")
+        return True
 
 async def start_server() -> None:
     await asyncssh.create_server(MySSHServer, '', SSH_PORT,
@@ -244,6 +269,9 @@ async def start_server() -> None:
                                  )
 
 
+
+containers = []
+
 if os.geteuid() != 0:
     print("This must be run as root to spawn docker containers", file=sys.stderr)
     sys.exit(1)
@@ -253,6 +281,9 @@ with open("most_common_passwords.txt", "r") as pass_file:
     common_passwords = [line.rstrip("\n") for line in pass_file]
 with open("most_common_username.txt", "r") as user_file:
     common_username = [line.rstrip("\n") for line in user_file]
+with open(LOGS_FOLDER + "/uptime", "w") as uptime_file:
+    uptime_file.write(str(time.time()))
+
 
 pretty_formatter = logging.Formatter(
     "%(asctime)s %(levelname)s %(message)s"
@@ -265,8 +296,8 @@ minimal_formatter = logging.Formatter(
     "%(asctime)s %(message)s",
     datefmt = "%d/%m-%H:%M:%S"
 )
-raw_formatter = logging.Formatter(
-    "%(message)s",
+unix_formatter = logging.Formatter(
+    "%(created).2f %(message)s",
 )
 
 Path(LOGS_FOLDER).mkdir(exist_ok=True, parents=True)
@@ -293,11 +324,15 @@ cmd_std_in_logger.setLevel(logging.INFO)
 
 conn_ip_logger = logging.getLogger("conn_ips")
 conn_ip_logger_file = logging.FileHandler(LOGS_FOLDER + "/ips.log")
-conn_ip_logger_file.setFormatter(raw_formatter)
+conn_ip_logger_file.setFormatter(unix_formatter)
 conn_ip_logger.addHandler(conn_ip_logger_file)
 conn_ip_logger.setLevel(logging.INFO)
 
-
+comb_logger = logging.getLogger("combined")
+comb_logger_file = logging.FileHandler(LOGS_FOLDER + "/combined.log")
+comb_logger_file.setFormatter(unix_formatter)
+comb_logger.addHandler(comb_logger_file)
+comb_logger.setLevel(logging.INFO)
 
 loop = asyncio.new_event_loop()
 try:
