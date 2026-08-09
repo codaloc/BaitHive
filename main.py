@@ -281,8 +281,14 @@ with open("most_common_passwords.txt", "r") as pass_file:
     common_passwords = [line.rstrip("\n") for line in pass_file]
 with open("most_common_username.txt", "r") as user_file:
     common_username = [line.rstrip("\n") for line in user_file]
+
+Path(LOGS_FOLDER).mkdir(exist_ok=True, parents=True)
+
 with open(LOGS_FOLDER + "/uptime", "w") as uptime_file:
     uptime_file.write(str(time.time()))
+
+with open(LOGS_FOLDER + "/container_count", "w") as cc_file:
+    cc_file.write(str(len(containers)))
 
 
 pretty_formatter = logging.Formatter(
@@ -300,7 +306,6 @@ unix_formatter = logging.Formatter(
     "%(created).2f %(message)s",
 )
 
-Path(LOGS_FOLDER).mkdir(exist_ok=True, parents=True)
 creds_logger = logging.getLogger("credentials")
 creds_handler = logging.FileHandler(LOGS_FOLDER + "/credentials.log")
 creds_handler.setFormatter(minimal_formatter)
