@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="static/style.css"/>
+    <title>BaitHive stats</title>
+</head>
+<body>
+<pre class="banner crt">                                    
+      ▄▄▄                ▄▄▄  ▄▄▄                
+     ██▀▀█▄          █▄ █▀██  ██                 
+     ██ ▄█▀       ▀▀▄██▄  ██  ██   ▀▀            
+     ██▀▀█▄ ▄▀▀█▄ ██ ██   ██████   ██▀█▄ ██▀▄█▀█▄
+   ▄ ██  ▄█ ▄█▀██ ██ ██   ██  ██   ██ ██▄██ ██▄█▀
+   ▀██████▀▄▀█▄██▄██▄██ ▀██▀  ▀██▄▄██  ▀█▀ ▄▀█▄▄▄
+</pre>
+<span class="sub">containerized medium-interaction honeypot</span>
+<br/> <br/>
+<br/> <br/>
+<h2>Status ––––––––––––––––––––––––––––––––––––––––</h2>
+<table class="telemetry">
+    <tbody>
+    <tr><td>consecutive uptime</td><td>{{uptime}}</td></tr>
+    <tr><td>currently trapped</td><td>{{currently_trapped}}</td></tr>
+    </tbody>
+</table>
+
+ 
+<h2>Logins & Creds ––––––––––––––––––––––––––––––––</h2>
+<table class="telemetry">
+    <tbody>
+    <tr><td>logins today</td><td>{{logins_today}}</td></tr>
+    <tr><td>total attempts</td><td>{{total_attempts}}</td></tr>
+    <tr><td>unique ips</td><td>{{unique_ips}}</td></tr>
+    <tr><td>unique users</td><td>{{unique_users}}</td></tr>
+    <tr><td>unique passwords</td><td>{{unique_pass}}</td></tr>
+    <tr><td>unique pairs</td><td>{{unique_pairs}}</td></tr>
+    </tbody>
+</table>
+
+<h2>Commands ––––––––––––––––––––––––––––––––––––––</h2>
+<table class="telemetry">
+    <tbody>
+    <tr><td>unique commands</td><td>{{unique_commands}}</td></tr>
+    <tr><td>total commands</td><td>{{total_commands}}</td></tr>
+    </tbody>
+</table>
+
+<h2>Recent intrusions –––––––––––––––––––––––––––––</h2>
+<table class="contact">
+    <thead>
+    <tr><th>time</th><th>src</th><th>user:pass</th><th>entry</th></tr>
+    </thead>
+    <tbody>
+        {% for time, ip, creds, res in last_attempts %}
+        <tr><td>{{time}}</td><td>{{ip}}</td><td>{{creds}}</td><td>{{res}}</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h2>Password leaderboard ––––––––––––––––––––––––––</h2>
+<table class="telemetry">
+    <thead>
+    <tr><th>count</th><th>password</th></tr>
+    </thead>
+    <tbody>
+        {% for password, count in top_passwords %}
+        <tr><tr><td>{{count}}</td><td>{{password}}</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h2>Username leaderboard ––––––––––––––––––––––––––</h2>
+<table class="telemetry">
+    <thead>
+    <tr><th>count</th><th>username</th></tr>
+    </thead>
+    <tbody>
+        {% for username, count in top_usernames %}
+        <tr><tr><td>{{count}}</td><td>{{username}}</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h2>IP leaderboard ––––––––––––––––––––––––––––––––</h2>
+<table class="telemetry">
+    <thead>
+    <tr><th>count</th><th>ip</th></tr>
+    </thead>
+    <tbody>
+        {% for ip, count in top_ips %}
+        <tr><tr><td>{{count}}</td><td>{{ip}}</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h2>Command leaderboard –––––––––––––––––––––––––––</h2>
+<table class="telemetry">
+    <thead>
+    <tr><th>count</th><th>command</th></tr>
+    </thead>
+    <tbody>
+        {% for cmd, count in top_cmd %}
+        <tr><tr><td>{{count}}</td><td>{{cmd}}</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+</body>
+</html>

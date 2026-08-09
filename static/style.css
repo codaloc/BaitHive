@@ -1,0 +1,69 @@
+body {
+    margin: 0;
+    padding: 24px 24px;
+    background: #000;
+    color: #00ff9c;
+    font-family: "Courier New", monospace; 
+    font-size: 15px;
+}
+
+
+
+pre.banner {
+    font-size: clamp(6px, 1.7vw, 15px);
+}
+
+.sub {
+    font-size: clamp(6px, 1.7vw, 15px);
+    letter-spacing: .18em;
+    margin-top: -40px;
+}
+
+h2, th {
+    color: #0b6b4a;
+    font-size: 15px;
+}
+
+
+table {
+    border-collapse: collapse;
+    border: 1px solid #0b6b4a;
+    width: max-content;
+    max-width: 100%;
+    color: #00ff9c;
+}
+
+th, td {
+    padding: 3px 14px;
+    white-space: nowrap;
+    border: 2px solid #0b6b4a;
+}
+
+table.telemetry td:first-child {
+    color: #2f6f5c;
+}
+
+
+/*-------------- crt effect --------------------------*/
+
+.crt {
+  text-shadow:
+    0 0 2px #00ff88,
+    0 0 6px #00ff88;
+  position: relative;
+  animation: flicker 0.08s infinite alternate;
+}
+
+.sub {
+text-shadow:
+    0 0 1px #00ff8897,
+    0 0 2px #00ff8893;
+  animation: flicker 0.08s infinite alternate;
+}
+
+
+
+@keyframes flicker {
+  from { opacity: 0.95; }
+  to   { opacity: 1; }
+}
