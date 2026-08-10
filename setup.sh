@@ -63,4 +63,4 @@ systemctl daemon-reload || { echo "\e[31mFailed to reaload systemctl daemon \e[0
 
 echo "\n\n\n"
 echo -e "\e[36mBaitHive is ready to be started.\e[0m"
-echo -e "\e[36muse 'sudo ./start' or 'sudo ./start --no-webstats' to start with or without the statistic web-service (port 19473)\e[0m"
+echo -e "\e[36muse 'sudo ./start.sh' or 'sudo ./start.sh --no-webstats' to start with or without the statistic web-service (port 19473)\e[0m"
