@@ -1,12 +1,8 @@
-<p align="center"><code style="font-family:monospace">
-   ▄▄▄                ▄▄▄  ▄▄▄                
-  ██▀▀█▄          █▄ █▀██  ██                 
-  ██ ▄█▀       ▀▀▄██▄  ██  ██   ▀▀            
-  ██▀▀█▄ ▄▀▀█▄ ██ ██   ██████   ██▀█▄ ██▀▄█▀█▄
-▄ ██  ▄█ ▄█▀██ ██ ██   ██  ██   ██ ██▄██ ██▄█▀
-▀██████▀▄▀█▄██▄██▄██ ▀██▀  ▀██▄▄██  ▀█▀ ▄▀█▄▄▄
-</code> </p>
+<p align="center">
+  <img src="./static/banner.svg" alt="BaitHive Banner" width="100%">
+</p>
 
+# BaitHive
 ## Containerized Dynamically Created Medium-Interaction Honeypot
 
 ### Requirements
